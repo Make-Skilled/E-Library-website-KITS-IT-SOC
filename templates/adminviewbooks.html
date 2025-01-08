@@ -38,6 +38,26 @@
         color: #ffcc00;
       }
 
+      /* Search Bar Styles */
+      .search-bar {
+        width: 300px;
+        padding: 12px 15px;
+        border: 1px solid #ccc;
+        border-radius: 25px;
+        font-size: 16px;
+        background-color: #fff;
+        transition: all 0.3s ease;
+        margin: 20px auto;
+        display: block;
+      }
+
+      .search-bar:focus {
+        outline: none;
+        border-color: #4facfe;
+        box-shadow: 0 0 8px rgba(79, 172, 254, 0.5);
+        background-color: #f9f9f9;
+      }
+
       /* Container Styles */
       .container {
         width: 90%;
@@ -138,14 +158,18 @@
     <!-- Navbar -->
     <div class="navbar">
       <div class="logo">
-        <a href="/admindex">Admin Dashboard</a>
+          <a href="/admindex">Admin Dashboard</a>
       </div>
       <div class="nav-links">
-        <a href="/admindex">Add Book</a>
-        <a href="/returnaccept">Admin Requests</a>
-        <a href="/logout">Logout</a>
+          <a href="/admindex">Add Book</a>
+          <a href="/viewbooks">View Books</a>
+          <a href="/adminrequests">Books Requests</a>
+          <a href="/logout">Logout</a>
       </div>
-    </div>
+  </div>
+
+    <!-- Search Bar -->
+    <input type="text" id="searchBar" class="search-bar" placeholder="Search by title, author, or publisher" onkeyup="searchBooks()">
 
     <!-- Container -->
     <div class="container">
@@ -159,7 +183,7 @@
       </div>
 
       <!-- Books Table -->
-      <table>
+      <table id="booksTable">
         <thead>
           <tr>
             <th>Title</th>
@@ -167,6 +191,8 @@
             <th>Publisher</th>
             <th>Year</th>
             <th>ISBN</th>
+            <th>Description</th>
+            <th>Count</th>
             <th>Cover Image</th>
             <th>Actions</th>
           </tr>
@@ -179,6 +205,8 @@
             <td>{{ book.publisher }}</td>
             <td>{{ book.year_published }}</td>
             <td>{{ book.isbn }}</td>
+            <td>{{ book.description }}</td>
+            <td>{{ book.number }}</td>
             <td>
               <img src="{{ book.cover_image }}" alt="Book Cover" />
             </td>
@@ -201,5 +229,38 @@
         </tbody>
       </table>
     </div>
+
+    <script>
+      // Function to search in the table based on title, author, or publisher
+      function searchBooks() {
+        var input = document.getElementById('searchBar');
+        var filter = input.value.toLowerCase();
+        var table = document.getElementById('booksTable');
+        var tr = table.getElementsByTagName('tr');
+
+        // Loop through all table rows and hide those that don't match the search
+        for (var i = 1; i < tr.length; i++) {
+          var td = tr[i].getElementsByTagName('td');
+          var found = false;
+          
+          // Check if any of the columns match the search filter
+          for (var j = 0; j < td.length; j++) {
+            if (td[j]) {
+              if (td[j].textContent.toLowerCase().includes(filter)) {
+                found = true;
+                break;
+              }
+            }
+          }
+
+          // Display or hide the row based on the search
+          if (found) {
+            tr[i].style.display = "";
+          } else {
+            tr[i].style.display = "none";
+          }
+        }
+      }
+    </script>
   </body>
 </html>

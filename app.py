@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from werkzeug.utils import secure_filename
 from bson import ObjectId
 from datetime import datetime
+from bson.errors import InvalidId
 import os
 
 api=Flask(__name__)
@@ -14,6 +15,7 @@ uregister=db['uregister']
 addbook=db['addbook']
 borrowed=db['borrowed']
 returnbook=db['returnbook']
+requests=db['requests']
 
 
 UPLOAD_FOLDER = 'static/uploads/'  # Set your desired folder
@@ -67,6 +69,7 @@ def adminlog():
     admin_password = "password1234"
     uname = request.form.get("username")
     upass = request.form.get("password")
+    session['user']="admin"
     print(uname,upass)
     if uname == admin_username and upass == admin_password:
         return render_template("adminindex.html")
@@ -81,7 +84,7 @@ def userregister():
     print(uname,uemail,uphone,upass)
     user = uregister.find_one({"username": uname})
     if user:
-        return render_template("userregister.html",status="User Allready Existed")
+        return render_template("userregister.html",status="User Already Existed")
     uregister.insert_one({"username": uname,"email": uemail,"phone": uphone,"password": upass})
     return render_template("userregister.html",status1="Registration Successful")
 
@@ -94,11 +97,14 @@ def userlogin():
     if user:
         if user["password"] == upass:
             session['username']=uname
-            books=list(addbook.find())
-            return render_template("userindex.html",books=books)
+            return redirect("/homepage")
        
         return render_template("userlogin.html",status="Invalid Login Credentials")
     
+@api.route("/homepage")
+def userlog():
+    books=list(addbook.find())
+    return render_template("userindex.html",books=books)
 
 @api.route("/addbookdetail",methods=['post'])
 def addbookdetail():
@@ -108,6 +114,8 @@ def addbookdetail():
     year_published=request.form.get("year_published")
     isbn=request.form.get("isbn")
     cover_image=request.files.get("cover_image")
+    description=request.form.get('description')
+    number=request.form.get('number')
 
     print(title,author,publisher,year_published,isbn,cover_image)
     cover_image_path = None
@@ -117,7 +125,7 @@ def addbookdetail():
         filename = secure_filename(cover_image.filename)
         cover_image_path = os.path.join(UPLOAD_FOLDER, filename)
         cover_image.save(cover_image_path) 
-    addbook.insert_one({"title":title,"author":author,"publisher":publisher,"year_published":year_published,"isbn":isbn,"cover_image":cover_image_path,"borrowed_by":[]})
+    addbook.insert_one({"title":title,"author":author,"publisher":publisher,"year_published":year_published,"isbn":isbn,"cover_image":cover_image_path,"borrowed_by":[],"number":number,"description":description})
     return render_template("adminindex.html",status="Book details added successfully")
 
 @api.route("/viewbooks")  # This Api is for retreaving bookdetails from the db and display
@@ -134,7 +142,7 @@ def deletebook(book_id):
     books=addbook.find()
     books=list(books)
 
-    return render_template("adminviewbooks.html",books=books)
+    return redirect("/viewbooks")
 
 @api.route("/editbook/<book_id>") #This Api is for edit book details page redirection based on id
 def editbook(book_id):
@@ -185,37 +193,48 @@ def home():
 @api.route("/viewbuttton/<book_id>")
 def viewbutton(book_id):
     details = addbook.find_one({"_id": ObjectId(book_id)})
-    print(details)
     return render_template("userviewdetails.html",book=details)
-
 
 @api.route("/borrow/<book_id>")
 def borrow_book(book_id):
     # Ensure the user is logged in
     if 'username' not in session:
-        return render_template("userlogin",status="Please login to borrow")
+        return render_template("userlogin.html", status="Please login to borrow")
 
     # Get the username from session
     username = session['username']
 
-    # Fetch the book by its ObjectId
-    book = addbook.find_one({"_id": ObjectId(book_id)})
+    try:
+        # Fetch the book by its ObjectId
+        book = addbook.find_one({"_id": ObjectId(book_id)})
 
-    # Check if the book has already been borrowed by the user
-    if username in book.get("borrowed_by", []):
-        details = addbook.find_one({"_id": ObjectId(book_id)})
-        return render_template("userviewdetails.html",status="You have already bprrowed this book",book=details)
+        if not book:
+            return render_template("userviewdetails.html", status="Book not found", book=None)
 
-    # Add the username to the borrowed_by list
-    addbook.update_one(
-        {"_id": ObjectId(book_id)},
-        {"$push": {"borrowed_by": username}}
-    )
+        # Check if the user has already borrowed the book
+        print(username)
+        if username in book.get("borrowed_by", []):
+            return render_template("userviewdetails.html", status="You have already borrowed this book", book=book)
 
-    # Return success message
-    details = addbook.find_one({"_id": ObjectId(book_id)})
-    return render_template("userviewdetails.html",status="You have successfully boroowed the book",book=details)
+        # Check if the book is available to borrow
+        if int(book["number"]) > 0:
+            # Decrement the number of available books by 1
+            addbook.update_one(
+                {"_id": ObjectId(book_id)},
+                {
+                    "$push": {"borrowed_by": username},
+                    "$set": {"number":str(int(book["number"])-1)}
+                }
+            )
 
+            # Fetch the updated book details
+            updated_book = addbook.find_one({"_id": ObjectId(book_id)})
+            return render_template("userviewdetails.html", status="You have successfully borrowed the book", book=updated_book)
+        else:
+            return render_template("userviewdetails.html", status="Sorry, this book is currently not available", book=book)
+
+    except InvalidId:
+        return render_template("userviewdetails.html", status="Invalid book ID", book=None)
 @api.route("/my_borrowed_books", methods=["GET"])
 def my_borrowed_books():
     # Ensure the user is logged in
@@ -251,32 +270,50 @@ def my_borrowed_books():
 def return_book(book_id):
     # Check if the user is logged in (username exists in session)
     if 'username' not in session:
-        return render_template("userlogin",status="Please login to Return")  # Redirect to login page if not logged in
+        return render_template("userlogin.html", status="Please login to return")  # Redirect to login page if not logged in
     
     username = session['username']  # Retrieve username from session
+    
+    # Check if the username already borrowed this book
+    book = addbook.find_one({"_id": ObjectId(book_id), "borrowed_by": username})
 
+    if not book:
+        # If the book is not found in the borrowed_by array, return error message
+        print("User has not borrowed this book")
+        return render_template("userborrowedbooks.html", status="You have not borrowed this book", return_id=book_id)
+    
     if request.method == "POST":
-        bookname =  addbook.find_one({"_id": ObjectId(book_id)}) # Get bookname from the submitted form
-        
-        # If bookname is missing, re-render the form with an error message
-        if not bookname:
-            return render_template('userborrowedbooks.html', error="Book name is required", return_id=book_id)
-        
-        # Prepare data to insert into MongoDB
+        book = addbook.find_one({"_id": ObjectId(book_id)})  # Get book from the database
+
+        # If the book is not found, re-render the page with an error message
+        if not book:
+            print("Book not found")
+            return render_template('userborrowedbooks.html', error="Book not found", return_id=book_id)
+
+        # Prepare data for return request
         return_data = {
             "username": username,
-            "bookname": bookname
+            "bookname": book['title'],  # Get book title from the fetched book
+            "book_id": book_id
         }
 
-        # Insert into MongoDB
-        
-        
-        
+        # Insert the return request into the MongoDB collection
         returnbook.insert_one(return_data)
-        
 
-        return redirect(url_for("my_borrowed_books"))
-    
+        # Remove the username from the borrowed_by array and increment the book number
+        addbook.update_one(
+            {"_id": ObjectId(book_id)},
+            {
+                "$pull": {"borrowed_by": username},  # Remove username from borrowed_by array
+                "$set": {"number": str(int(book["number"]) + 1)}  # Increment the available number of books
+            }
+        )
+
+        # Redirect to the borrowed books page after returning the book
+        return redirect("/my_borrowed_books")
+
+    return render_template("userborrowedbooks.html", return_id=book_id)
+
 @api.route("/returnaccept")
 def returnaccept():
     books=list(returnbook.find())
@@ -292,14 +329,92 @@ def acceptreturn():
     addbook.update_one({"_id":data["bookname"]["_id"]},{"$pull":{"borrowed_by":data['username']}})
     return redirect("/returnaccept")
 
+@api.route("/requestbook/<book_id>")
+def requestbook(book_id):
+    book=addbook.find_one({"_id":ObjectId(book_id)})
+    request_entry = {
+            "title": book['title'], # Get from form input
+            "book_id":book_id,
+            "author":book['author'],
+            "publisher":book['publisher'],
+            "status":"pending",
+            "requested_by": session['username']  # Get user info from form input
+    }
+    requests.insert_one(request_entry)
+    details = addbook.find_one({"_id": ObjectId(book_id)})
+    return render_template("userviewdetails.html",book=details,status="Book request sent successfully")
+    
+@api.route("/userbookrequests")
+def userbookrequests():
+    user_requests=requests.find({"requested_by":session['username']})
+    return render_template("userrequests.html",requests=user_requests)
 
+@api.route("/updaterequeststatus/<request_id>", methods=["POST"])
+def update_request_status(request_id):
+    try:
+        # Ensure request_id is a valid ObjectId
+        valid_request_id = ObjectId(request_id)
+        
+        # Update the status of the request to "book available"
+        result = requests.update_one(
+            {"_id": valid_request_id},
+            {"$set": {"status": "Book available"}}
+        )
+        
+        if result.matched_count > 0:
+            # Redirect to a page showing all requests or a success message
+            return redirect("/adminrequests")  # Replace with appropriate view function
+        else:
+            return render_template("error.html", message="Request not found or already updated.")
+    
+    except InvalidId:
+        # Handle the error if the ObjectId is invalid
+        return render_template("error.html", message="Invalid request ID.")
+    
+@api.route("/deleterequest/<request_id>", methods=["POST"])
+def delete_request(request_id):
+    try:
+        # Ensure request_id is a valid ObjectId
+        valid_request_id = ObjectId(request_id)
+        
+        # Delete the request document from the database
+        result = requests.delete_one({"_id": valid_request_id})
+        
+        if result.deleted_count > 0:
+            # Redirect to a page showing all requests or a success message
+            return redirect("/adminrequests")  # Replace with appropriate view function
+        else:
+            return render_template("error.html", message="Request not found or already deleted.")
+    
+    except InvalidId:
+        # Handle the error if the ObjectId is invalid
+        return render_template("error.html", message="Invalid request ID.")
 
-
-
+@api.route("/userdeleterequest/<request_id>", methods=["POST"])
+def delete_request_user(request_id):
+    try:
+        # Ensure request_id is a valid ObjectId
+        valid_request_id = ObjectId(request_id)
+        
+        # Delete the request document from the database
+        result = requests.delete_one({"_id": valid_request_id})
+        
+        if result.deleted_count > 0:
+            # Redirect to a page showing all requests or a success message
+            return redirect("/userbookrequests")  # Replace with appropriate view function
+        else:
+            return render_template("error.html", message="Request not found or already deleted.")
+    
+    except InvalidId:
+        # Handle the error if the ObjectId is invalid
+        return render_template("error.html", message="Invalid request ID.")
+    
+  
+@api.route("/adminrequests")
+def adminrequests():
+    book_requests=requests.find({"status":"pending"})
+    return render_template('adminrequests.html',requests=book_requests)
 
     
-
-    
-
 if __name__=="__main__":
     api.run(host='0.0.0.0', port=6021,debug=True)

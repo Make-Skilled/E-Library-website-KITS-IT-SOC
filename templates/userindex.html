@@ -32,7 +32,6 @@
             font-size: 16px;
             display: flex;
             justify-content: flex-end; /* Align items to the right */
-            
             align-items: center;
         }
 
@@ -58,6 +57,8 @@
             font-size: 16px; /* Slightly larger font size for better readability */
             background-color: #fff; /* Clear background */
             transition: all 0.3s ease; /* Smooth transition for focus and hover */
+            margin: 20px auto; /* Center the search bar */
+            display: block;
         }
 
         /* Focused state */
@@ -66,17 +67,6 @@
             border-color: #4facfe; /* Border turns blue when focused */
             box-shadow: 0 0 8px rgba(79, 172, 254, 0.5); /* Soft blue glow */
             background-color: #f9f9f9; /* Subtle background change when focused */
-        }
-
-        /* Hover effect */
-        .search-bar:hover {
-            border-color: #4facfe; /* Change border color on hover */
-            background-color: #f1f1f1; /* Slight background change on hover */
-        }
-
-        /* Spacer to adjust navbar height */
-        .spacer {
-            margin-top: 80px; /* Adjusted for taller navbar */
         }
 
         /* Book Cards Section */
@@ -98,6 +88,7 @@
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
             transform: scale(1);
             transition: all 0.3s ease-in-out;
+            margin-top:0px;
         }
 
         .book-card:hover {
@@ -107,7 +98,7 @@
 
         .book-image img {
             width: 100%;
-            height: 350px;
+            height: 250px;
             object-fit: cover;
             border-bottom: 2px solid #f1f1f1;
         }
@@ -176,15 +167,16 @@
 <body>
     <!-- Navigation Bar -->
     <div class="navbar">
-        <a href="/">Home</a>
-        <a href="/logout">Logout</a>
+        <a href="/userindex">Home</a>
         <a href="/my_borrowed_books">Borrowed Books</a>
-        <select id="filterDropdown" class="search-bar" onchange="filterBooks()">
-            <option value="">All</option>
-        </select>
+        <a href="/userbookrequests">My Requests</a>
+        <a href="/logout">Logout</a>
     </div>
 
-    <div class="spacer"></div>
+    <div class="spacer" style="margin-top:60px"></div>
+
+    <!-- Search Bar for Book Search -->
+    <input type="text" id="searchBar" class="search-bar" placeholder="Search by title, author, or publisher" onkeyup="searchBooks()">
 
     <!-- Book Cards Section -->
     <div id="bookContainer" class="book-container">
@@ -193,7 +185,7 @@
         <div class="book-card" 
              data-title="{{ book.title | lower }}" 
              data-author="{{ book.author | lower }}"
-             data-genre="{{ book.publisher | lower }}">
+             data-publisher="{{ book.publisher | lower }}">
             <div class="book-image">
                 <img src="{{book.cover_image}}" alt="{{ book.title }} cover">
             </div>
@@ -210,47 +202,22 @@
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            populateDropdown();
-        });
+        // Search function to filter books by title, author, or publisher
+        function searchBooks() {
+            var input = document.getElementById('searchBar');
+            var filter = input.value.toLowerCase();
+            var bookContainer = document.getElementById('bookContainer');
+            var books = bookContainer.getElementsByClassName('book-card');
+            
+            for (var i = 0; i < books.length; i++) {
+                var title = books[i].getAttribute('data-title');
+                var author = books[i].getAttribute('data-author');
+                var publisher = books[i].getAttribute('data-publisher');
 
-        function populateDropdown() {
-            var dropdown = document.getElementById("filterDropdown");
-            var bookContainer = document.getElementById("bookContainer");
-            var bookCards = bookContainer.getElementsByClassName("book-card");
-            var options = new Set();
-
-            // Collect unique authors and genres from the book cards
-            for (var i = 0; i < bookCards.length; i++) {
-                var author = bookCards[i].getAttribute("data-author");
-                var genre = bookCards[i].getAttribute("data-genre");
-                options.add(author);
-                options.add(genre);
-            }
-
-            // Add options to the dropdown
-            options.forEach(function(option) {
-                var opt = document.createElement("option");
-                opt.value = option;
-                opt.textContent = option.charAt(0).toUpperCase() + option.slice(1);
-                dropdown.appendChild(opt);
-            });
-        }
-
-        function filterBooks() {
-            var dropdown = document.getElementById("filterDropdown");
-            var filter = dropdown.value.toLowerCase();
-            var container = document.getElementById("bookContainer");
-            var cards = container.getElementsByClassName("book-card");
-
-            for (var i = 0; i < cards.length; i++) {
-                var author = cards[i].getAttribute("data-author");
-                var genre = cards[i].getAttribute("data-genre");
-
-                if (filter === "" || author.includes(filter) || genre.includes(filter)) {
-                    cards[i].style.display = "";
+                if (title.includes(filter) || author.includes(filter) || publisher.includes(filter)) {
+                    books[i].style.display = '';
                 } else {
-                    cards[i].style.display = "none";
+                    books[i].style.display = 'none';
                 }
             }
         }
