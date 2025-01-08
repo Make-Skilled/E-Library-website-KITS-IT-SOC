@@ -172,6 +172,9 @@
             <label for="description">Description:</label>
             <textarea id="description" name="description" rows="4" required>{{ book.description }}</textarea>
 
+            <label for="description">No.of Books:</label>
+            <input type="number" name="number"  required value={{book.number}}></input>
+
             <input type="submit" value="Update Book">
         </form>
 
