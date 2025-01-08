@@ -6,16 +6,21 @@
     <title>Welcome to E-Library</title>
     <style>
       /* General Styles */
-      body {
-        font-family: 'Roboto', sans-serif;
+      * {
         margin: 0;
         padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Roboto', sans-serif;
         background-color: #e9ecef;
         background-image: url('https://png.pngtree.com/thumb_back/fh260/background/20230526/pngtree-an-old-bookcase-in-a-library-image_2642908.jpg');
         background-size: cover;
         background-position: center;
+        background-attachment: fixed;
         color: #333;
-        height: 100vh;
+        min-height: 100vh;
         overflow-x: hidden;
         display: flex;
         flex-direction: column;
@@ -25,9 +30,9 @@
       .navbar {
         background-color: #2c3e50;
         color: #fff;
-        padding: 10px 20px;
+        padding: 1rem;
         display: flex;
-        justify-content: flex;
+        justify-content: flex-end;
         align-items: center;
         position: fixed;
         top: 0;
@@ -36,37 +41,40 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
+      .navbar-mobile {
+        display: none;
+      }
+
       .navbar a {
         color: #fff;
         text-decoration: none;
         font-weight: 600;
-        margin-left: 20px;
-        padding: 10px 20px;
-        transition: background-color 0.3s, transform 0.3s;
+        margin-left: 1rem;
+        padding: 0.625rem 1.25rem;
+        transition: all 0.3s ease;
+        border-radius: 4px;
       }
 
       .navbar a:hover {
         background-color: #34495e;
-        transform: scale(1.05);
-        border-radius: 4px;
+        transform: translateY(-2px);
       }
 
       /* Main Content */
       .container {
-        width: 90%;
-        margin: 100px auto 0 auto;
-        padding: 40px;
-        background-color: white;
+        width: min(90%, 1200px);
+        margin: 6rem auto 2rem;
+        padding: clamp(1rem, 5vw, 2.5rem);
+        background-color: rgba(255, 255, 255, 0.95);
         border-radius: 12px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
         text-align: center;
-        overflow: hidden;
       }
 
       h1 {
         color: #333;
-        font-size: 38px;
-        margin-bottom: 40px;
+        font-size: clamp(1.5rem, 5vw, 2.375rem);
+        margin-bottom: 2.5rem;
         font-weight: 700;
         text-transform: uppercase;
       }
@@ -74,20 +82,24 @@
       /* Card Section */
       .cards-container {
         display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 3 cards per row */
-        gap: 20px;
-        padding: 40px 0;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        gap: clamp(1rem, 3vw, 1.25rem);
+        padding: 2.5rem 0;
       }
 
       .card {
         background-color: #fff;
         border-radius: 12px;
-        padding: 25px;
+        padding: clamp(1rem, 3vw, 1.5625rem);
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         text-align: center;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         border: 1px solid #ddd;
         cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
       }
 
       .card:hover {
@@ -96,55 +108,110 @@
       }
 
       .card h3 {
-        font-size: 24px;
+        font-size: clamp(1.25rem, 3vw, 1.5rem);
         color: #333;
-        margin-bottom: 15px;
+        margin-bottom: 1rem;
         font-weight: 600;
       }
 
       .card p {
         color: #555;
-        font-size: 16px;
+        font-size: clamp(0.875rem, 2vw, 1rem);
         line-height: 1.6;
       }
 
-      /* Responsive Text Sizes */
+      /* Mobile Menu */
+      .menu-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+      }
+
+      /* Responsive Design */
       @media (max-width: 768px) {
-        h1 {
-          font-size: 30px;
+        .navbar {
+          justify-content: space-between;
+          padding: 0.75rem;
         }
 
-        .card h3 {
-          font-size: 20px;
+        .menu-toggle {
+          display: block;
         }
 
-        .card p {
-          font-size: 14px;
+        .navbar-links {
+          display: none;
+          width: 100%;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          background-color: #2c3e50;
+          padding: 1rem;
+          flex-direction: column;
+          gap: 0.5rem;
         }
 
-        /* Responsive grid: 1 card per row on small screens */
+        .navbar-links.active {
+          display: flex;
+        }
+
+        .navbar a {
+          margin: 0;
+          width: 100%;
+          text-align: center;
+        }
+
+        .container {
+          margin-top: 5rem;
+          padding: 1rem;
+        }
+
         .cards-container {
-          grid-template-columns: 1fr; 
+          gap: 1rem;
         }
       }
 
-      @media (max-width: 1024px) {
-        /* For tablet and mid-sized screens: 2 cards per row */
-        .cards-container {
-          grid-template-columns: repeat(2, 1fr);
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #1a1a1a;
+          color: #fff;
+        }
+
+        .container {
+          background-color: rgba(30, 30, 30, 0.95);
+        }
+
+        .card {
+          background-color: #2d2d2d;
+          border-color: #404040;
+        }
+
+        .card h3 {
+          color: #fff;
+        }
+
+        .card p {
+          color: #bbb;
         }
       }
     </style>
   </head>
   <body>
     <!-- Navbar -->
-    <div class="navbar">
-      <a href="/ureg">User Register</a>
-      <a href="/admlog">Admin Login</a>
-    </div>
+    <nav class="navbar">
+      <button class="menu-toggle" aria-label="Toggle navigation menu" onclick="toggleMenu()">☰</button>
+      <div class="navbar-links">
+        <a href="/ureg">User Register</a>
+        <a href="/admlog">Admin Login</a>
+      </div>
+    </nav>
 
     <!-- Main Container -->
-    <div class="container">
+    <main class="container">
       <h1>Welcome to E-Library</h1>
 
       <!-- Cards for Features -->
@@ -179,8 +246,13 @@
           <p>Both users and admins can securely log in to access their personalized content and manage their accounts.</p>
         </div>
       </div>
-    </div>
+    </main>
 
-    
+    <script>
+      function toggleMenu() {
+        const navbarLinks = document.querySelector('.navbar-links');
+        navbarLinks.classList.toggle('active');
+      }
+    </script>
   </body>
 </html>
