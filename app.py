@@ -8,8 +8,8 @@ import os
 api=Flask(__name__)
 api.secret_key="1234567890"
 
-cluster=MongoClient("mongodb://127.0.0.1:27017")
-db=cluster['library']
+cluster=MongoClient("mongodb://127.0.0.1:17017")
+db=cluster['KITS-SOC-Library']
 uregister=db['uregister']
 addbook=db['addbook']
 borrowed=db['borrowed']
