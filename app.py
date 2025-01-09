@@ -163,6 +163,8 @@ def updatedbook(book_id):
     year_published = request.form.get("year_published")
     isbn = request.form.get("isbn")
     cover_image = request.files.get("cover_image")
+    description=request.form.get("description")
+    number=request.form.get("number")
 
     # Define the document to update
     update_data = {
@@ -170,7 +172,9 @@ def updatedbook(book_id):
         "author": author,
         "publisher": publisher,
         "year_published": year_published,
-        "isbn": isbn
+        "isbn": isbn,
+        "description":description,
+        "number":number
     }
 
     # Handle cover image upload if provided
