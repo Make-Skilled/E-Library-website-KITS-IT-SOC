@@ -421,4 +421,4 @@ def adminrequests():
 
     
 if __name__=="__main__":
-    api.run(host='0.0.0.0', port=6021,debug=True)
+    api.run(port=6021,debug=True)
